@@ -42,7 +42,7 @@ Please keep in mind:
 - Then fan controlled by multiply sensors, boost will be set to the maximal value across them.
 - Fan control is indirect at modern systems. You **can not** set exact fan RPMs, but can modify it using "boost" curves.
 
-You can minimize application to tray pressing Minimize button (or the top one), left click on try icon restore application back, right click brings you the context menu for power mode/g-mode change.
+You can minimize application to tray pressing Minimize button (or the top one), left click on try icon restore application back, right click brings you the context menu for power mode/g-mode/Windows power change.
 
 There are some settings into application top menu under "Settings":
 - "Start with windows" - Application will run at system start.

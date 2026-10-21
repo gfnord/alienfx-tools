@@ -270,10 +270,12 @@ int PowerPlan::GetActiveLevel() {
 		return -1;
 	GUID active = *activePtr;
 	LocalFree(activePtr);
-	if (modernStandby) {
+	// Power modes only apply on top of Balanced. With another plan active (set outside the app),
+	// Modern Standby systems fall through and report that plan's level like classic systems.
+	if (modernStandby && active == planTemplates[1]) {
 		auto getOverlay = (GetOverlayFn)PowrProf("PowerGetEffectiveOverlayScheme");
 		GUID overlay;
-		if (active != planTemplates[1] || !getOverlay || getOverlay(&overlay) != ERROR_SUCCESS)
+		if (!getOverlay || getOverlay(&overlay) != ERROR_SUCCESS)
 			return -1;
 		for (int i = 0; i < levels; i++)
 			if (overlay == overlays[i])

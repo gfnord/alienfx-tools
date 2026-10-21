@@ -80,6 +80,19 @@ void UpdateWinPowerUI(HWND hDlg) {
         ComboBox_SetCurSel(GetDlgItem(hDlg, IDC_COMBO_WINPOWER), winPower->GetActiveLevel());
 }
 
+// Starts a switch from the drop-down or tray menu; WM_POWERPLAN_DONE completes it.
+void SwitchWinPower(HWND hDlg, int level) {
+    HWND winpower_list = GetDlgItem(hDlg, IDC_COMBO_WINPOWER);
+    if (winPower->SetLevel(level)) {
+        ComboBox_SetCurSel(winpower_list, level);
+        EnableWindow(winpower_list, false);
+    }
+    else {
+        UpdateWinPowerUI(hDlg);
+        MessageBox(hDlg, "Cannot start the Windows power switch.", "Windows power", MB_OK | MB_ICONERROR);
+    }
+}
+
 // CPU boost combos edit the active plan, so re-read it after plan changes.
 void ReloadBoost(HWND hDlg) {
     if (sch_guid)
@@ -274,15 +287,8 @@ LRESULT CALLBACK FanDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
             }
         } break;
         case IDC_COMBO_WINPOWER:
-            if (HIWORD(wParam) == CBN_SELCHANGE) {
-                HWND winpower_list = GetDlgItem(hDlg, IDC_COMBO_WINPOWER);
-                if (winPower->SetLevel(ComboBox_GetCurSel(winpower_list)))
-                    EnableWindow(winpower_list, false);
-                else {
-                    UpdateWinPowerUI(hDlg);
-                    MessageBox(hDlg, "Cannot start the power plan switch.", "Windows power", MB_OK | MB_ICONERROR);
-                }
-            }
+            if (HIWORD(wParam) == CBN_SELCHANGE)
+                SwitchWinPower(hDlg, ComboBox_GetCurSel(GetDlgItem(hDlg, IDC_COMBO_WINPOWER)));
             break;
         case IDC_EDIT_POLLING:
             if (HIWORD(wParam) == EN_KILLFOCUS) {
@@ -462,6 +468,16 @@ LRESULT CALLBACK FanDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
             EnableMenuItem(tMenu, ID_MENU_GMODE, mon->acpi->isGmode ? MF_ENABLED : MF_DISABLED);
             CheckMenuItem(tMenu, ID_MENU_GMODE, fan_conf->lastProf->gmodeStage ? MF_CHECKED : MF_UNCHECKED);
 
+            int winLevel = winPower->GetActiveLevel();
+            HMENU wMenu = CreatePopupMenu();
+            for (int i = 0; i < PowerPlan::levels; i++)
+                AppendMenu(wMenu, MF_STRING | (winPower->Busy() ? MF_GRAYED : MF_ENABLED), ID_MENU_WINPOWER_LEVEL + i, PowerPlan::levelNames[i]);
+            if (winLevel >= 0)
+                CheckMenuRadioItem(wMenu, ID_MENU_WINPOWER_LEVEL, ID_MENU_WINPOWER_LEVEL + PowerPlan::levels - 1,
+                    ID_MENU_WINPOWER_LEVEL + winLevel, MF_BYCOMMAND);
+            ModifyMenu(tMenu, ID_MENU_WINPOWER, MF_BYCOMMAND | MF_STRING | MF_POPUP, (UINT_PTR)wMenu,
+                (string("Windows power") + (winLevel >= 0 ? string(" - ") + PowerPlan::levelNames[winLevel] : "")).c_str());
+
             GetCursorPos(&lpClickPoint);
             SetForegroundWindow(hDlg);
             TrackPopupMenu(tMenu, TPM_LEFTALIGN | TPM_LEFTBUTTON | TPM_BOTTOMALIGN,
@@ -528,8 +544,12 @@ LRESULT CALLBACK FanDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
             AlterGMode(fan_conf->numlockActive, power_list);
             break;
         default:
-            mon->SetPowerMode(idx);
-            ComboBox_SetCurSel(power_list, mon->powerMode);
+            if (idx >= ID_MENU_WINPOWER_LEVEL && idx < ID_MENU_WINPOWER_LEVEL + PowerPlan::levels)
+                SwitchWinPower(hDlg, idx - ID_MENU_WINPOWER_LEVEL);
+            else {
+                mon->SetPowerMode(idx);
+                ComboBox_SetCurSel(power_list, mon->powerMode);
+            }
         }
     } break;
     case WM_NOTIFY:

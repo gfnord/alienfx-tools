@@ -25,9 +25,11 @@ The app connects to GitHub only for the optional update check (`Settings` - `Che
 The `Windows power` drop-down switches Windows between four levels: Power saver, Balanced, High Performance and Ultimate Performance. It shows the active level at start and follows changes made outside the app (Control Panel, Settings, `powercfg`). It stays empty if the active plan is not one of the four levels. The label next to it shows which mechanism is used:
 
 - **Power plans** - the level activates the matching built-in plan (matched by GUID, so it works on non-English Windows). If the plan is missing, the app creates it once with `powercfg -duplicatescheme`, reusing an existing plan with the same name if there is one, and stores the new plan GUID in `HKCU\SOFTWARE\Alienfan\PowerPlans`.
-- **Power modes (Modern Standby)** - on systems with Modern Standby (S0 Low Power Idle), Windows hides and blocks every plan except Balanced. The app then never creates plans. It activates Balanced and sets the Windows power mode instead: Best power efficiency, Balanced, Better performance or Best performance.
+- **Power modes (Modern Standby)** - on systems with Modern Standby (S0 Low Power Idle), Windows hides and blocks every plan except Balanced. The app then never creates plans. It activates Balanced and sets the Windows power mode instead: Best power efficiency, Balanced, Better performance or Best performance. If another plan was activated outside the app (for example an Ultimate Performance copy made with `powercfg`), the drop-down shows that plan's level until you pick one.
 
 The app never changes `PlatformAoAcOverride` and never turns off Modern Standby - on such hardware this removes Sleep completely. If a switch fails, the drop-down returns to the active level and the error is shown.
+
+The same four levels are in the tray icon's right-click menu under `Windows power`.
 
 ## Settings backup
 
