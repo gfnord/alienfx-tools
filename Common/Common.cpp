@@ -37,7 +37,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 			case NM_CLICK:
 			case NM_RETURN:
 			{
-				ShellExecute(NULL, "open", "https://github.com/T-Troll/alienfx-tools", NULL, NULL, SW_SHOWNORMAL);
+				ShellExecute(NULL, "open", "https://github.com/gfnord/alienfx-tools", NULL, NULL, SW_SHOWNORMAL);
 			} break;
 			} break;
 		}
@@ -148,7 +148,7 @@ DWORD WINAPI CUpdateCheck(LPVOID lparam) {
 		for (int delay = 0; delay < 15 && !InternetGetConnectedState(&byteRead, 0); delay++)
 			Sleep(1000);
 	if (InternetGetConnectedState(&byteRead, 0) && (session = InternetOpen("alienfx-tools", INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0))) {
-		if (req = InternetOpenUrl(session, "https://api.github.com/repos/t-troll/alienfx-tools/tags?per_page=1",
+		if (req = InternetOpenUrl(session, "https://api.github.com/repos/gfnord/alienfx-tools/tags?per_page=1",
 			NULL, 0, INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE, NULL)) {
 			if (InternetReadFile(req, buf.get(), 254, &byteRead)) {
 				buf[byteRead] = 0;
@@ -301,10 +301,6 @@ void UpdateCombo(HWND ctrl, const string* items, int sel, vector<int> val) {
 			if (sel == i)
 				ComboBox_SetCurSel(ctrl, sel);
 	}
-}
-
-void SetBitMask(WORD& val, WORD mask, bool state) {
-	val = (val & ~mask) | (state * mask);
 }
 
 bool AddTrayIcon(NOTIFYICONDATA* iconData, bool needCheck) {

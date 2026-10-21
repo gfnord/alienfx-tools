@@ -1,6 +1,6 @@
 ## `alienfan-gui`
 
-![AlienFan-GUI](https://github.com/T-Troll/alienfx-tools/blob/master/Doc/img/alienfan.png?raw=true)
+![AlienFan-GUI](img/alienfan.png)
 
 GUI application for fan and power modes control.  
 Then you start it, you will see 2 main windows - Temperature sensors (with current and maximal (press "x" button at list head to reset it to current values) readings) and Fans (with current RPM readings), as well as separate Fan curve (graph).  
@@ -9,7 +9,7 @@ You can also change sensor name by double-click on it. In case you remove sensor
 "Power mode" drop down used to select global power mode. Power modes are system-specific, so exact power limit values depends of you gear, you can use third-party tools to check it. You can edit mode name by selecting it and type new name.  
 First power mode always named "Manual", and the last power mode is a special one, named "G-mode" (if supported at you system). It's accelerate performance of the system, but set fans to maximal RPMs available.  
 "CPU mode" drop downs can be used to select active Windows Power Plan boost mode (separately for AC and battery power). This settings is extremely useful for Ryzen CPU, but even for Intel it provide a little performance boost (+3% at "Aggressive" for my gear).  
-"Windows power" drop down switches Windows between Power saver, Balanced, High Performance and Ultimate Performance - using power plans, or Windows power modes on Modern Standby systems (the label next to it shows which). See [README](/README.md#windows-power-plan-switch-alienfan-gui) for details.  
+"Windows power" drop down switches Windows between Power saver, Balanced, High Performance and Ultimate Performance - using power plans, or Windows power modes on Modern Standby systems (the label next to it shows which). See [README](/README.md#windows-power-plan-switch) for details.  
 
 **Important:** Fans can only be controlled if Power Mode set to "Manual", and will be defined by BIOS value at other modes!
 

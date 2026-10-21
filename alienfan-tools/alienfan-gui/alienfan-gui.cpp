@@ -483,7 +483,7 @@ LRESULT CALLBACK FanDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
         case NIN_BALLOONUSERCLICK:
         {
             if (isNewVersion) {
-                ShellExecute(NULL, "open", "https://github.com/T-Troll/alienfx-tools/releases", NULL, NULL, SW_SHOWNORMAL);
+                ShellExecute(NULL, "open", "https://github.com/gfnord/alienfx-tools/releases", NULL, NULL, SW_SHOWNORMAL);
                 isNewVersion = false;
             }
         } break;
