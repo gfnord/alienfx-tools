@@ -20,6 +20,8 @@
 #define IDC_BUT_RESETBOOST              1017
 #define IDC_EDIT_POLLING                1018
 #define IDC_FC_ID                       1019
+#define IDC_COMBO_WINPOWER              1020
+#define IDC_STATIC_WINPOWER             1021
 #define IDC_AC_BOOST                    1124
 #define IDC_DC_BOOST                    1125
 #define IDC_BUT_OVER                    1130
@@ -51,7 +53,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        135
 #define _APS_NEXT_COMMAND_VALUE         32807
-#define _APS_NEXT_CONTROL_VALUE         1020
+#define _APS_NEXT_CONTROL_VALUE         1022
 #define _APS_NEXT_SYMED_VALUE           111
 #endif
 #endif

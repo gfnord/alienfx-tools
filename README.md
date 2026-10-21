@@ -67,6 +67,15 @@ Project Wiki has [more details and the list of tested devices](https://github.co
 If your light device is not supported, you can [help me support it](https://github.com/T-Troll/alienfx-tools/wiki/How-to-collect-data-for-the-new-light-device).  
 In case of issues with fan control, please open issue here or contact me via Discord support server.
 
+## Windows power plan switch (AlienFan GUI)
+
+The `Windows power` drop-down in `alienfan-gui` switches Windows between four levels: Power saver, Balanced, High Performance and Ultimate Performance. It shows the active level at start and follows changes made outside the app (Control Panel, Settings, `powercfg`). It stays empty if the active plan is not one of the four levels. The label next to it shows which mechanism is used:
+
+- **Power plans** - the level activates the matching built-in plan (matched by GUID, so it works on non-English Windows). If the plan is missing, the app creates it once with `powercfg -duplicatescheme`, reusing an existing plan with the same name if there is one, and stores the new plan GUID in `HKCU\SOFTWARE\Alienfan\PowerPlans`.
+- **Power modes (Modern Standby)** - on systems with Modern Standby (S0 Low Power Idle), Windows hides and blocks every plan except Balanced. The app then never creates plans. It activates Balanced and sets the Windows power mode instead: Best power efficiency, Balanced, Better performance or Best performance.
+
+The app never changes `PlatformAoAcOverride` and never turns off Modern Standby - on such hardware this removes Sleep completely. If a switch fails, the drop-down returns to the active level and the error is shown.
+
 ## Light system reset
 
 - In rare case light system freeze, shutdown or hibernate your system (some lights can stay on after shutdown), disconnect all cables, including power adapter, and wait about 15 seconds (or until all lights turn off), then start it back.

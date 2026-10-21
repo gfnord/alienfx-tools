@@ -4,6 +4,7 @@
 #include "Resource.h"
 #include "ConfigFan.h"
 #include "MonHelper.h"
+#include "PowerPlan.h"
 #include "common.h"
 
 #pragma comment(linker,"\"/manifestdependency:type='win32' \
@@ -21,6 +22,7 @@ int idc_version = IDC_STATIC_VERSION, idc_homepage = IDC_SYSLINK_HOMEPAGE; // fo
 
 ConfigFan* fan_conf = NULL;                     // Config...
 MonHelper* mon = NULL;                          // Monitoring object
+PowerPlan* winPower = NULL;                     // Windows power plan/mode switch
 
 UINT newTaskBar = RegisterWindowMessage(TEXT("TaskbarCreated"));
 HWND mDlg = NULL, fanWindow = NULL, tipWindow = NULL, tempList = NULL;
@@ -70,6 +72,26 @@ void SetPowerState() {
     SYSTEM_POWER_STATUS state;
     GetSystemPowerStatus(&state);
     fan_conf->acPower = state.ACLineStatus;
+}
+
+// Show active Windows power level; skipped during a switch, completion refreshes it.
+void UpdateWinPowerUI(HWND hDlg) {
+    if (winPower && !winPower->Busy())
+        ComboBox_SetCurSel(GetDlgItem(hDlg, IDC_COMBO_WINPOWER), winPower->GetActiveLevel());
+}
+
+// CPU boost combos edit the active plan, so re-read it after plan changes.
+void ReloadBoost(HWND hDlg) {
+    if (sch_guid)
+        LocalFree(sch_guid);
+    sch_guid = NULL;
+    DWORD acMode = 0, dcMode = 0;
+    if (PowerGetActiveScheme(NULL, &sch_guid) == ERROR_SUCCESS) {
+        PowerReadACValueIndex(NULL, sch_guid, &GUID_PROCESSOR_SETTINGS_SUBGROUP, &perfset, &acMode);
+        PowerReadDCValueIndex(NULL, sch_guid, &GUID_PROCESSOR_SETTINGS_SUBGROUP, &perfset, &dcMode);
+    }
+    UpdateCombo(GetDlgItem(hDlg, IDC_AC_BOOST), pModes, acMode);
+    UpdateCombo(GetDlgItem(hDlg, IDC_DC_BOOST), pModes, dcMode);
 }
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -191,13 +213,12 @@ LRESULT CALLBACK FanDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 
         // set PerfBoost lists...
         IIDFromString(L"{be337238-0d82-4146-a960-4f3749d470c7}", &perfset);
-        PowerGetActiveScheme(NULL, &sch_guid);
-        DWORD acMode, dcMode;
-        PowerReadACValueIndex(NULL, sch_guid, &GUID_PROCESSOR_SETTINGS_SUBGROUP, &perfset, &acMode);
-        PowerReadDCValueIndex(NULL, sch_guid, &GUID_PROCESSOR_SETTINGS_SUBGROUP, &perfset, &dcMode);
+        ReloadBoost(hDlg);
 
-        UpdateCombo(GetDlgItem(hDlg, IDC_AC_BOOST), pModes, acMode);
-        UpdateCombo(GetDlgItem(hDlg, IDC_DC_BOOST), pModes, dcMode);;
+        // Windows power plans/modes
+        winPower = new PowerPlan(hDlg);
+        SetDlgItemText(hDlg, IDC_STATIC_WINPOWER, winPower->modernStandby ? "Power modes (Modern Standby)" : "Power plans");
+        UpdateCombo(GetDlgItem(hDlg, IDC_COMBO_WINPOWER), PowerPlan::levelNames, winPower->GetActiveLevel());
 
         // So open fan control window...
         RECT cDlg;
@@ -241,6 +262,8 @@ LRESULT CALLBACK FanDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
             switch (HIWORD(wParam)) {
             case CBN_SELCHANGE:
             {
+                if (!sch_guid)
+                    break;
                 int cBst = ComboBox_GetCurSel(GetDlgItem(hDlg, wmId));
                 if (wmId == IDC_AC_BOOST)
                     PowerWriteACValueIndex(NULL, sch_guid, &GUID_PROCESSOR_SETTINGS_SUBGROUP, &perfset, cBst);
@@ -250,6 +273,17 @@ LRESULT CALLBACK FanDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
             } break;
             }
         } break;
+        case IDC_COMBO_WINPOWER:
+            if (HIWORD(wParam) == CBN_SELCHANGE) {
+                HWND winpower_list = GetDlgItem(hDlg, IDC_COMBO_WINPOWER);
+                if (winPower->SetLevel(ComboBox_GetCurSel(winpower_list)))
+                    EnableWindow(winpower_list, false);
+                else {
+                    UpdateWinPowerUI(hDlg);
+                    MessageBox(hDlg, "Cannot start the power plan switch.", "Windows power", MB_OK | MB_ICONERROR);
+                }
+            }
+            break;
         case IDC_EDIT_POLLING:
             if (HIWORD(wParam) == EN_KILLFOCUS) {
                 mon->Stop();
@@ -395,6 +429,17 @@ LRESULT CALLBACK FanDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
         EnableWindow(power_list, (bool)lParam);
         SetWindowText(GetDlgItem(hDlg, IDC_BUT_OVER), (bool)lParam ? "Check\n Max. boost" : "Stop check");
         break;
+    case WM_POWERPLAN_DONE: {
+        string error = winPower->Finish(lParam);
+        EnableWindow(GetDlgItem(hDlg, IDC_COMBO_WINPOWER), true);
+        // Shows the real state, which reverts the selection if the switch failed.
+        UpdateWinPowerUI(hDlg);
+        if (error.size())
+            MessageBox(hDlg, error.c_str(), "Windows power", MB_OK | MB_ICONERROR);
+    } break;
+    case WM_POWERPLAN_CHANGED:
+        UpdateWinPowerUI(hDlg);
+        break;
     case WM_APP + 1:
     {
         switch (lParam) {
@@ -516,6 +561,8 @@ LRESULT CALLBACK FanDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
         SendMessage(hDlg, SW_SHOW, SIZE_MINIMIZED, 0);
         break;
     case WM_DESTROY:
+        delete winPower;
+        winPower = NULL;
         LocalFree(sch_guid);
         PostQuitMessage(0);
         break;
@@ -545,6 +592,12 @@ LRESULT CALLBACK FanDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
             SetPowerState();
             mon->SetCurrentMode();
             ComboBox_SetCurSel(power_list, mon->powerMode);
+            break;
+        case PBT_POWERSETTINGCHANGE:
+            if (((POWERBROADCAST_SETTING*)lParam)->PowerSetting == GUID_ACTIVE_POWERSCHEME) {
+                ReloadBoost(hDlg);
+                UpdateWinPowerUI(hDlg);
+            }
             break;
         }
         break;

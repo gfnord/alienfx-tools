@@ -152,11 +152,13 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="PowerPlan.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="alienfan-gui.cpp" />
+    <ClCompile Include="PowerPlan.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="alienfan-gui.rc" />
