@@ -50,6 +50,22 @@ msbuild alienfan-tools\alienfan-gui\alienfan-gui.vcxproj -p:Configuration=Releas
 
 The executable is written to `x64\Release\alienfan-gui.exe`.
 
+## Versioning and releases
+
+Versions are `MAJOR.MINOR.PATCH`. The single source of truth is `FILEVERSION` / `PRODUCTVERSION` (and the matching `FileVersion` / `ProductVersion` strings) in `alienfan-tools/alienfan-gui/alienfan-gui.rc`, stored as four parts (`1.0.0` = `1,0,0,0`).
+
+To release:
+
+1. Bump the version in `alienfan-gui.rc` and commit it.
+2. Tag the commit with the same version and push the tag:
+   ```
+   git tag 1.0.1
+   git push origin 1.0.1
+   ```
+3. The `Release` GitHub Actions workflow checks that the tag matches the version in `alienfan-gui.rc`, builds Release x64 and publishes a GitHub release with `alienfan-gui.exe` attached.
+
+The in-app update check (`Settings` - `Check for updates`) compares the app version with the latest GitHub release of this repository.
+
 ## License
 
 MIT. See [LICENSE](/LICENSE).

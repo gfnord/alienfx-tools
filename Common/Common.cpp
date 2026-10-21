@@ -1,7 +1,7 @@
 #include "Common.h"
 #include <windowsx.h>
 #include <WinInet.h>
-#include <memory>
+#include <algorithm>
 //#include <Psapi.h>
 
 using namespace std;
@@ -137,41 +137,43 @@ void ShowNotification(NOTIFYICONDATA* niData, string title, string message) {
 	niData->uFlags &= ~NIF_INFO;
 }
 
+// True if version a (dotted, up to 4 numeric parts, optional leading 'v') is newer than b.
+static bool IsNewerVersion(string a, const string& b) {
+	unsigned va[4]{}, vb[4]{};
+	if (a.size() && (a[0] == 'v' || a[0] == 'V'))
+		a.erase(0, 1);
+	sscanf_s(a.c_str(), "%u.%u.%u.%u", &va[0], &va[1], &va[2], &va[3]);
+	sscanf_s(b.c_str(), "%u.%u.%u.%u", &vb[0], &vb[1], &vb[2], &vb[3]);
+	return lexicographical_compare(vb, vb + 4, va, va + 4);
+}
+
 DWORD WINAPI CUpdateCheck(LPVOID lparam) {
 	NOTIFYICONDATA* niData = (NOTIFYICONDATA*)lparam;
 	HINTERNET session, req = NULL;
-	// RAII so the buffer can't leak if std::string ops on `res` below ever throw bad_alloc.
-	unique_ptr<char[]> buf(new char[255]);
 	DWORD byteRead;
 	if (!needUpdateFeedback)
 		// check connection for some seconds
 		for (int delay = 0; delay < 15 && !InternetGetConnectedState(&byteRead, 0); delay++)
 			Sleep(1000);
-	if (InternetGetConnectedState(&byteRead, 0) && (session = InternetOpen("alienfx-tools", INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0))) {
-		if (req = InternetOpenUrl(session, "https://api.github.com/repos/gfnord/alienfx-tools/tags?per_page=1",
+	if (InternetGetConnectedState(&byteRead, 0) && (session = InternetOpen("alienfan-gui", INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0))) {
+		// Latest published release; no "tag_name" until the first release exists.
+		if (req = InternetOpenUrl(session, "https://api.github.com/repos/gfnord/alienfx-tools/releases/latest",
 			NULL, 0, INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE, NULL)) {
-			if (InternetReadFile(req, buf.get(), 254, &byteRead)) {
-				buf[byteRead] = 0;
-				string res = buf.get();
-				size_t pos = res.find("\"name\":");
-				if (pos != string::npos) {
-					//isConnectionFailed = false;
-					res = res.substr(pos + 8);
-					res = res.substr(0, res.find("\""));
-					int ndots = 0;
-					for (auto i = res.begin(); i != res.end(); i++)
-						if (*i == '.')
-							ndots++;
-					while (ndots++ < 3)
-						res += ".0";
-					if (res.compare(GetAppVersion(false)) > 0) {
-						// new version detected!
-						ShowNotification(niData, "Update available!", "Latest version is " + res);
-						isNewVersion = true;
-					} else
-						if (needUpdateFeedback)
-							ShowNotification(niData, "You are up to date!", "You are using latest version.");
-				}
+			string res;
+			char buf[1024];
+			while (InternetReadFile(req, buf, sizeof(buf), &byteRead) && byteRead)
+				res.append(buf, byteRead);
+			size_t pos = res.find("\"tag_name\""), start, end;
+			if (pos != string::npos && (pos = res.find(':', pos)) != string::npos &&
+				(start = res.find('"', pos)) != string::npos && (end = res.find('"', ++start)) != string::npos) {
+				string tag = res.substr(start, end - start);
+				if (IsNewerVersion(tag, GetAppVersion(false))) {
+					// new version detected!
+					ShowNotification(niData, "Update available!", "Latest version is " + tag);
+					isNewVersion = true;
+				} else
+					if (needUpdateFeedback)
+						ShowNotification(niData, "You are up to date!", "You are using latest version.");
 			}
 			InternetCloseHandle(req);
 		}

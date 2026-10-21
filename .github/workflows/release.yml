@@ -1,0 +1,38 @@
+name: Release
+
+# Push a tag like 1.0.0 (must match PRODUCTVERSION in alienfan-gui.rc) to build and publish a release.
+on:
+  push:
+    tags: ['[0-9]+.[0-9]+.[0-9]+*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check tag matches app version
+        shell: pwsh
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          $rc = Get-Content alienfan-tools/alienfan-gui/alienfan-gui.rc -Raw
+          if ($rc -notmatch 'PRODUCTVERSION (\d+),(\d+),(\d+),(\d+)') { throw 'PRODUCTVERSION not found in alienfan-gui.rc' }
+          $app = $Matches[1..4] -join '.'
+          $parts = [System.Collections.Generic.List[string]]$env:TAG.Split('.')
+          while ($parts.Count -lt 4) { $parts.Add('0') }
+          if (($parts -join '.') -ne $app) { throw "Tag $env:TAG does not match app version $app in alienfan-gui.rc" }
+
+      - uses: microsoft/setup-msbuild@v2
+
+      - name: Build
+        run: msbuild alienfx-tools.sln -p:Configuration=Release -p:Platform=x64 -m -nologo
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$env:TAG" x64/Release/alienfan-gui.exe --title "Alienware Fan Control $env:TAG" --generate-notes
